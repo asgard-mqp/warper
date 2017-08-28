@@ -65,16 +65,16 @@ void generate()
           searchY += shifts[direction][1];
           distance ++;
           if( searchX >= maxT || searchX < 0 || searchY >= maxR || searchY < 0 ||distance > 20 ){
-            searchX -= shifts[direction][0];
-            searchY -= shifts[direction][1];
             distance = 0;
           }
 
         }
         //found position
+        if(distance > 0){
         remap[x][y][direction*3] = preInterpImage[searchX][searchY][0] -1;//get original image pixel that created pixel at searchX,searchY 
         remap[x][y][direction*3 + 1] = preInterpImage[searchX][searchY][1]-1;
         remap[x][y][direction*3 + 2] = distance;
+      }
       }
     }
   }
@@ -103,8 +103,10 @@ void process()
         int searchX = (int) remap[x][y][direction*3];
         int searchY = (int) remap[x][y][direction*3 + 1];
         int distance = remap[x][y][direction*3 + 2];
-        //ROS_INFO("x %d y %d distance %d",searchX,searchY,distance);
-        //ROS_INFO("getO %d",getO(searchX,searchY,0));
+        if(searchX >= 1920 || searchY >= 1080){
+          ROS_INFO("x %d y %d distance %d",searchX,searchY,distance);
+        }
+        //ROS_INFO("get %d",getO(searchX,searchY,0));
 
         red += (1.0/distance)*getO(searchX,searchY,0);
         blue += (1.0/distance)*getO(searchX,searchY,1);
@@ -114,6 +116,11 @@ void process()
       if(y>300 && y<600){
         getN(x,y,0)=255;
       }
+      getN(x,y,0)= round(red/total_weight);
+      getN(x,y,1)= round(blue/total_weight);
+      getN(x,y,2)= round(green/total_weight);
+
+
     }
   }
 }
