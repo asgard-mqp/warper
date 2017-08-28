@@ -48,17 +48,15 @@ void generate()
     }
   }
 
-  ROS_INFO("finished Trig");
-
 
 
   //X in new image
   int shifts[4][2]={{0,1},{1,0},{0,-1},{-1,0}};
   for(unsigned short x=0; x<maxT; x++){
     for(unsigned short y=0; y<maxR; y++){//for every 
-      unsigned short searchX = x;
-      unsigned short searchY = maxR - y;
       for(int direction=0; direction<4; direction++){//check each direction
+        unsigned short searchX = x;
+        unsigned short searchY = maxR -y;
         int distance = 1;
         while(distance > 0 && preInterpImage[searchX][searchY][0] ==0 && preInterpImage[searchX][searchY][1] ==0){//while preInterpImage point is 0,0, ie not known
           searchX += shifts[direction][0];
@@ -67,8 +65,7 @@ void generate()
           if( searchX >= maxT || searchX < 0 || searchY >= maxR || searchY < 0 || distance > 20 ){
             distance = 0;
           }
-        }
-        //found position
+        }      
         if(distance > 0){
           remap[x][y][direction*3] = preInterpImage[searchX][searchY][0] -1;//get original image pixel that created pixel at searchX,searchY 
           remap[x][y][direction*3 + 1] = preInterpImage[searchX][searchY][1]-1;
@@ -77,6 +74,7 @@ void generate()
       }
     }
   }
+
 }
 
 void process()
@@ -103,21 +101,16 @@ void process()
           ROS_INFO("x %d y %d distance %d",searchX,searchY,distance);
         }
         //ROS_INFO("get %d",getO(searchX,searchY,0));
-        if(distance == 1){
+        if(distance >0){
           red += (1.0/distance)*getO(searchX,searchY,0);
           green += (1.0/distance)*getO(searchX,searchY,1);
           blue += (1.0/distance)*getO(searchX,searchY,2);
           total_weight += (1.0/distance);
         }
       }
-      if(y>300 && y<600){
-        getN(x,y,0)=255;
-      }
       getN(x,y,0)= round(red/total_weight);
       getN(x,y,1)= round(green/total_weight);
       getN(x,y,2)= round(blue/total_weight);
-
-
     }
   }
 }
