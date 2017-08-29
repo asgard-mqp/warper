@@ -80,45 +80,31 @@ void generate()
   }
 }
 
-void process()
-{
-  image_out.header = image_in.header;
-  image_out.encoding = image_in.encoding;
-  image_out.is_bigendian = image_in.is_bigendian;
-  image_out.step = maxT * 3;
-  image_out.height = maxR;
-  image_out.width = maxT;
+__global__ void process(const float* __restrict__ const in, float* __restrict__ const out) {
+  int x = blockIdx.x * blockDim.x + threadIdx.x;
+  int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-  for (int x = 0; x < maxT; x++) {
-    for (int y = 0; y < maxR; y++) {
-      //for every
-      double red = 0;
-      double green = 0;
-      double blue = 0;
-      double total_weight = 0;
+  if (x < maxT && y < maxR) {
+    float red = 0, green = 0, blue = 0, total_weight = 0;
 
-      for (int direction = 0; direction < 4; direction++) {
-        //check each direction
-        const int searchX = remap[x][y][direction * 3];
-        const int searchY = remap[x][y][direction * 3 + 1];
-        const int distance = remap[x][y][direction * 3 + 2];
-        const float distInv = 1.0 / distance;
-        // if (searchX >= 1920 || searchY >= 1080) {
-        //   ROS_INFO("x %d y %d distance %d",searchX,searchY,distance);
-        // }
-        //ROS_INFO("get %d",getO(searchX,searchY,0));
-        if (distance > 0) {
-          red += distInv * getO(searchX, searchY, 0);
-          green += distInv * getO(searchX, searchY, 1);
-          blue += distInv * getO(searchX, searchY, 2);
-          total_weight += distInv;
-        }
+    for (int direction = 0; direction < 4; direction++) {
+      //check each direction
+      const int searchX = remap[x][y][direction * 3];
+      const int searchY = remap[x][y][direction * 3 + 1];
+      const int distance = remap[x][y][direction * 3 + 2];
+      const float distInv = 1.0 / distance;
+
+      if (distance > 0) { //TODO: Use in and out instead of image_in and image_out
+        red += distInv * image_in.data[image_in.step * searchY + 3 * searchX + 0]
+        green += distInv * image_in.data[image_in.step * searchY + 3 * searchX + 1]
+        blue += distInv * image_in.data[image_in.step * searchY + 3 * searchX + 2]
+        total_weight += distInv;
       }
-
-      getN(x, y, 0, round(red / total_weight));
-      getN(x, y, 1, round(green / total_weight));
-      getN(x, y, 2, round(blue / total_weight));
     }
+
+    image_out.data[image_out.step * y + 3 * x + 0] = round(red / total_weight);
+    image_out.data[image_out.step * y + 3 * x + 1] = round(green / total_weight);
+    image_out.data[image_out.step * y + 3 * x + 2] = round(blue / total_weight);
   }
 }
 
@@ -126,6 +112,9 @@ int main(int argc, char **argv) {
   ros::init(argc, argv, "warper_node");
   ros::NodeHandle node;
   ROS_INFO("starting");
+
+  const int n = maxT * maxR, blocksize = 512, nthreads = 1024;
+  int nblocks = n / nthreads;
 
   generate();
 
@@ -137,11 +126,18 @@ int main(int argc, char **argv) {
   ros::Subscriber sub = node.subscribe("/usb_cam/image_raw", 10, imageCallback);
   ros::Rate rate(100.0);
 
+  image_out.header = image_in.header;
+  image_out.encoding = image_in.encoding;
+  image_out.is_bigendian = image_in.is_bigendian;
+  image_out.step = maxT * 3;
+  image_out.height = maxR;
+  image_out.width = maxT;
+
   while (ros::ok()) {
     if(message) {
       message = false;
       //ROS_INFO("step %d height %d width %d encoding %s",image_in.step,image_in.height,image_in.width,image_in.encoding);
-      process();
+      process<<<nblocks, blocksize>>>(in, out); //TODO: Make in and out shared memory
       image_pub.publish(image_out);
     }
 
