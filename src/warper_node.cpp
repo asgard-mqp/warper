@@ -67,7 +67,7 @@ void generate()
           searchX += shifts[direction][0];
           searchY += shifts[direction][1];
           distance++;
-          if (searchX >= maxT || searchX < 0 || searchY >= maxR || searchY < 0 || distance > 10 ){
+          if (searchX >= maxT || searchX < 0 || searchY >= maxR || searchY < 0 || distance > 10 ) {
             distance = 0;
             remap[x][y][direction * 3] = 0 ; // point to origin
             remap[x][y][direction * 3 + 1] = 0;
@@ -75,15 +75,12 @@ void generate()
           }
         }
           //get original image pixel that created pixel at searchX,searchY
-        if(distance>0){
+        if (distance > 0) {
           remap[x][y][direction * 3] = preInterpImage[searchX][searchY][0] ;
           remap[x][y][direction * 3 + 1] = preInterpImage[searchX][searchY][1];
           remap[x][y][direction * 3 + 2] = distance;
         }
-          //if(distance==0)
-            //ROS_INFO("pixel %d %d",preInterpImage[searchX][searchY][0],preInterpImage[searchX][searchY][1]);
       }
-      //ROS_INFO("point");
     }
   }
 }
