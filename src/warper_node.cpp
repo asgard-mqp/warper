@@ -33,7 +33,8 @@ void imageCallback (const sensor_msgs::Image::ConstPtr& image)
   image_in = *image;
   message = true;
 }
-
+unsigned short FillerPixelX;
+unsigned short FillerPixelY;
 void generate()
 {
   //X in original image
@@ -42,14 +43,20 @@ void generate()
       const double Angle = atan2(x - midX, y - midY) * (180.0 / PI) + 180 ; //to degrees
       const unsigned short newX = round(Angle*25);//to 0.04 degrees
       const unsigned short newY = round(sqrt(pow((x - midX), 2) + pow((y - midY), 2))); // pixel radius
-      //ROS_INFO("X %d  Y %d",newX,newY);
-
-      if(newY < maxR) {
-        preInterpImage[newX][newY][0] = x + 1;//just need them to be non 0, will correct later
-        preInterpImage[newX][newY][1] = y + 1;
+      if(x==0 && y==0){
+        FillerPixelX = newX;
+        FillerPixelY = newY;
       }
+
+      if(newY < maxR && newX < maxT) {
+        preInterpImage[newX][newY][0] = x ;
+        preInterpImage[newX][newY][1] = y ;
+      }
+
+
     }
   }
+  ROS_INFO("trig");
 
   //X in new image
   static constexpr int shifts[4][2] = {{0,1},{1,0},{0,-1},{-1,0}};
@@ -61,21 +68,33 @@ void generate()
         unsigned short searchX = x;
         unsigned short searchY = maxR -y;
         int distance = 1;
-        while (distance > 0 && preInterpImage[searchX][searchY][0] == 0 && preInterpImage[searchX][searchY][1] == 0) {
-          //while preInterpImage point is 0,0, ie not known
+        //ROS_INFO("first %d second %d",preInterpImage[searchX][searchY][0],preInterpImage[searchX][searchY][1]);
+
+        while (distance > 0 && preInterpImage[searchX][searchY][0] == 65535 && preInterpImage[searchX][searchY][1] == 65535) {
+          //while preInterpImage point is -1,-1, ie not known
           searchX += shifts[direction][0];
           searchY += shifts[direction][1];
           distance++;
-          if (searchX >= maxT || searchX < 0 || searchY >= maxR || searchY < 0 || distance > 20 )
+          if (searchX >= maxT || searchX < 0 || searchY >= maxR || searchY < 0 || distance > 10 ){
             distance = 0;
+            remap[x][y][direction * 3] = 0 ; // point to origin
+            remap[x][y][direction * 3 + 1] = 0;
+            remap[x][y][direction * 3 + 2] = 65000; //weight 65000 to have little effect
+          }
         }
-        if (distance > 0) {
           //get original image pixel that created pixel at searchX,searchY
-          remap[x][y][direction * 3] = preInterpImage[searchX][searchY][0] -1;
-          remap[x][y][direction * 3 + 1] = preInterpImage[searchX][searchY][1]-1;
+        if(distance>0){
+          remap[x][y][direction * 3] = preInterpImage[searchX][searchY][0] ;
+          remap[x][y][direction * 3 + 1] = preInterpImage[searchX][searchY][1];
           remap[x][y][direction * 3 + 2] = distance;
         }
+          //if(distance==0)
+            //ROS_INFO("pixel %d %d",preInterpImage[searchX][searchY][0],preInterpImage[searchX][searchY][1]);
+        
       }
+      //ROS_INFO("point");
+
+
     }
   }
 }
@@ -89,13 +108,16 @@ void process()
   image_out.height = maxR;
   image_out.width = maxT;
 
-  for (int x = 0; x < maxT; x++) {
+  for (int x = 0; x < maxT-1; x++) {
     for (int y = 0; y < maxR; y++) {
       //for every
       double red = 0;
       double green = 0;
       double blue = 0;
       double total_weight = 0;
+      if(x==8999)
+        ROS_INFO("x %d y %d ",x,y);
+
 
       for (int direction = 0; direction < 4; direction++) {
         //check each direction
@@ -104,15 +126,14 @@ void process()
         const int distance = remap[x][y][direction * 3 + 2];
         const float distInv = 1.0 / distance;
         // if (searchX >= 1920 || searchY >= 1080) {
-        //   ROS_INFO("x %d y %d distance %d",searchX,searchY,distance);
+        //ROS_INFO("x %d y %d distance %d",searchX,searchY,distance);
         // }
         //ROS_INFO("get %d",getO(searchX,searchY,0));
-        if (distance > 0) {
-          red += distInv * getO(searchX, searchY, 0);
-          green += distInv * getO(searchX, searchY, 1);
-          blue += distInv * getO(searchX, searchY, 2);
-          total_weight += distInv;
-        }
+        red += distInv * getO(searchX, searchY, 0);
+        green += distInv * getO(searchX, searchY, 1);
+        blue += distInv * getO(searchX, searchY, 2);
+        total_weight += distInv;
+        
       }
 
       getN(x, y, 0, round(red / total_weight));
@@ -126,6 +147,10 @@ int main(int argc, char **argv) {
   ros::init(argc, argv, "warper_node");
   ros::NodeHandle node;
   ROS_INFO("starting");
+
+  memset(preInterpImage,-1,sizeof(unsigned short)*maxT*maxR*2);
+  ROS_INFO("started %d %d",preInterpImage[5][5][0],preInterpImage[5][5][1]);
+
 
   generate();
 
