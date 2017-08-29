@@ -42,11 +42,10 @@ void generate()
       const double Angle = atan2(x - midX, y - midY) * (180.0 / PI) + 180 ; //to degrees
       const unsigned short newX = round(Angle*25);//to 0.04 degrees
       const unsigned short newY = round(sqrt(pow((x - midX), 2) + pow((y - midY), 2))); // pixel radius
-      //ROS_INFO("X %d  Y %d",newX,newY);
 
-      if(newY < maxR) {
-        preInterpImage[newX][newY][0] = x + 1;//just need them to be non 0, will correct later
-        preInterpImage[newX][newY][1] = y + 1;
+      if(newY < maxR && newX < maxT) {
+        preInterpImage[newX][newY][0] = x ;
+        preInterpImage[newX][newY][1] = y ;
       }
     }
   }
@@ -61,21 +60,30 @@ void generate()
         unsigned short searchX = x;
         unsigned short searchY = maxR -y;
         int distance = 1;
-        while (distance > 0 && preInterpImage[searchX][searchY][0] == 0 && preInterpImage[searchX][searchY][1] == 0) {
-          //while preInterpImage point is 0,0, ie not known
+        //ROS_INFO("first %d second %d",preInterpImage[searchX][searchY][0],preInterpImage[searchX][searchY][1]);
+
+        while (distance > 0 && preInterpImage[searchX][searchY][0] == 65535 && preInterpImage[searchX][searchY][1] == 65535) {
+          //while preInterpImage point is -1,-1, ie not known
           searchX += shifts[direction][0];
           searchY += shifts[direction][1];
           distance++;
-          if (searchX >= maxT || searchX < 0 || searchY >= maxR || searchY < 0 || distance > 20 )
+          if (searchX >= maxT || searchX < 0 || searchY >= maxR || searchY < 0 || distance > 10 ){
             distance = 0;
+            remap[x][y][direction * 3] = 0 ; // point to origin
+            remap[x][y][direction * 3 + 1] = 0;
+            remap[x][y][direction * 3 + 2] = 65000; //weight 65000 to have little effect
+          }
         }
-        if (distance > 0) {
           //get original image pixel that created pixel at searchX,searchY
-          remap[x][y][direction * 3] = preInterpImage[searchX][searchY][0] -1;
-          remap[x][y][direction * 3 + 1] = preInterpImage[searchX][searchY][1]-1;
+        if(distance>0){
+          remap[x][y][direction * 3] = preInterpImage[searchX][searchY][0] ;
+          remap[x][y][direction * 3 + 1] = preInterpImage[searchX][searchY][1];
           remap[x][y][direction * 3 + 2] = distance;
         }
+          //if(distance==0)
+            //ROS_INFO("pixel %d %d",preInterpImage[searchX][searchY][0],preInterpImage[searchX][searchY][1]);
       }
+      //ROS_INFO("point");
     }
   }
 }
@@ -94,12 +102,11 @@ __global__ void process(const float* __restrict__ const in, float* __restrict__ 
       const int distance = remap[x][y][direction * 3 + 2];
       const float distInv = 1.0 / distance;
 
-      if (distance > 0) { //TODO: Use in and out instead of image_in and image_out
-        red += distInv * image_in.data[image_in.step * searchY + 3 * searchX + 0]
-        green += distInv * image_in.data[image_in.step * searchY + 3 * searchX + 1]
-        blue += distInv * image_in.data[image_in.step * searchY + 3 * searchX + 2]
-        total_weight += distInv;
-      }
+      //TODO: Use in and out instead of image_in and image_out
+      red += distInv * image_in.data[image_in.step * searchY + 3 * searchX + 0]
+      green += distInv * image_in.data[image_in.step * searchY + 3 * searchX + 1]
+      blue += distInv * image_in.data[image_in.step * searchY + 3 * searchX + 2]
+      total_weight += distInv;
     }
 
     image_out.data[image_out.step * y + 3 * x + 0] = round(red / total_weight);
@@ -113,8 +120,10 @@ int main(int argc, char **argv) {
   ros::NodeHandle node;
   ROS_INFO("starting");
 
+
   const int n = maxT * maxR, blocksize = 512, nthreads = 1024;
   int nblocks = n / nthreads;
+  memset(preInterpImage,-1,sizeof(unsigned short)*maxT*maxR*2);
 
   generate();
 
