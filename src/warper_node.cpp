@@ -99,8 +99,8 @@ void process()
 
       for (int direction = 0; direction < 4; direction++) {
         //check each direction
-        const int searchX = (int) remap[x][y][direction * 3];
-        const int searchY = (int) remap[x][y][direction * 3 + 1];
+        const int searchX = remap[x][y][direction * 3];
+        const int searchY = remap[x][y][direction * 3 + 1];
         const int distance = remap[x][y][direction * 3 + 2];
         const float distInv = 1.0 / distance;
         // if (searchX >= 1920 || searchY >= 1080) {
