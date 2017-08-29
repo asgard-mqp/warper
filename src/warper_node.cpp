@@ -101,16 +101,17 @@ void process()
         //check each direction
         const int searchX = (int) remap[x][y][direction * 3];
         const int searchY = (int) remap[x][y][direction * 3 + 1];
-        const float distanceInv = 1.0 / remap[x][y][direction * 3 + 2];
+        const int distance = remap[x][y][direction * 3 + 2];
+        const float distInv = 1.0 / distance;
         // if (searchX >= 1920 || searchY >= 1080) {
         //   ROS_INFO("x %d y %d distance %d",searchX,searchY,distance);
         // }
         //ROS_INFO("get %d",getO(searchX,searchY,0));
-        if (distanceInv > 0) {
-          red += distanceInv * getO(searchX, searchY, 0);
-          green += distanceInv * getO(searchX, searchY, 1);
-          blue += distanceInv * getO(searchX, searchY, 2);
-          total_weight += distanceInv;
+        if (distance > 0) {
+          red += distInv * getO(searchX, searchY, 0);
+          green += distInv * getO(searchX, searchY, 1);
+          blue += distInv * getO(searchX, searchY, 2);
+          total_weight += distInv;
         }
       }
 
