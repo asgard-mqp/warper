@@ -7,21 +7,26 @@ bool message = false;
 sensor_msgs::Image image_in;
 sensor_msgs::Image image_out;
 
-
-#define maxR 800
-#define maxT 9000
-unsigned short remap[maxT][maxR][12]; 
+static constexpr unsigned short maxR = 800, maxT = 9000;
+unsigned short remap[maxT][maxR][12];
 //4 directions
 //absolute X cord, absolute Y cord, distance it was away in new image
 
 unsigned short preInterpImage[maxT][maxR][2];
-//absolute X cord, absolute Y cord 
+//absolute X cord, absolute Y cord
 
-#define PI 3.14159265
-unsigned short midX = 960;
-unsigned short midY = 540;
-#define getO(x,y,z) image_in.data[image_in.step*y + 3*x + z]
-#define getN(x,y,z) image_out.data[image_out.step*y + 3*x + z]
+static constexpr float PI = 3.14159265;
+static constexpr unsigned short midX = 960, midY = 540;
+
+__attribute__((always_inline))
+uint8_t getO(const unsigned short x, const unsigned short y, const unsigned short z) {
+  return image_in.data[image_in.step * y + 3 * x + z];
+}
+
+__attribute__((always_inline))
+void getN(const unsigned short x, const unsigned short y, const unsigned short z, const float in) {
+  image_out.data[image_out.step * y + 3 * x + z] = in;
+}
 
 void imageCallback (const sensor_msgs::Image::ConstPtr& image)
 {
@@ -32,90 +37,91 @@ void imageCallback (const sensor_msgs::Image::ConstPtr& image)
 void generate()
 {
   //X in original image
-
-  for(int x =0;x<1920;x++){
-    for(int y=0; y < 1080; y++){
-
-      double Angle = atan2(x-midX,y-midY) * (180.0/PI) + 180 ; //to degrees
-      unsigned short newX = round(Angle*25);//to 0.04 degrees
-      unsigned short newY = round(sqrt(pow((x-midX),2) + pow((y-midY),2))); // pixel radius
+  for (int x = 0; x < 1920; x++) {
+    for (int y = 0; y < 1080; y++) {
+      const double Angle = atan2(x - midX, y - midY) * (180.0 / PI) + 180 ; //to degrees
+      const unsigned short newX = round(Angle*25);//to 0.04 degrees
+      const unsigned short newY = round(sqrt(pow((x - midX), 2) + pow((y - midY), 2))); // pixel radius
       //ROS_INFO("X %d  Y %d",newX,newY);
 
-      if(newY < maxR){
-        preInterpImage[newX][newY][0] = x+1;//just need them to be non 0, will correct later
-        preInterpImage[newX][newY][1] = y+1;
+      if(newY < maxR) {
+        preInterpImage[newX][newY][0] = x + 1;//just need them to be non 0, will correct later
+        preInterpImage[newX][newY][1] = y + 1;
       }
     }
   }
 
-
-
   //X in new image
-  int shifts[4][2]={{0,1},{1,0},{0,-1},{-1,0}};
-  for(unsigned short x=0; x<maxT; x++){
-    for(unsigned short y=0; y<maxR; y++){//for every 
-      for(int direction=0; direction<4; direction++){//check each direction
+  static constexpr int shifts[4][2] = {{0,1},{1,0},{0,-1},{-1,0}};
+  for (unsigned short x = 0; x < maxT; x++) {
+    for (unsigned short y = 0; y < maxR; y++) {
+      //for every
+      for (int direction = 0; direction < 4; direction++) {
+        //check each direction
         unsigned short searchX = x;
         unsigned short searchY = maxR -y;
         int distance = 1;
-        while(distance > 0 && preInterpImage[searchX][searchY][0] ==0 && preInterpImage[searchX][searchY][1] ==0){//while preInterpImage point is 0,0, ie not known
+        while (distance > 0 && preInterpImage[searchX][searchY][0] == 0 && preInterpImage[searchX][searchY][1] == 0) {
+          //while preInterpImage point is 0,0, ie not known
           searchX += shifts[direction][0];
           searchY += shifts[direction][1];
-          distance ++;
-          if( searchX >= maxT || searchX < 0 || searchY >= maxR || searchY < 0 || distance > 20 ){
+          distance++;
+          if (searchX >= maxT || searchX < 0 || searchY >= maxR || searchY < 0 || distance > 20 )
             distance = 0;
-          }
-        }      
-        if(distance > 0){
-          remap[x][y][direction*3] = preInterpImage[searchX][searchY][0] -1;//get original image pixel that created pixel at searchX,searchY 
-          remap[x][y][direction*3 + 1] = preInterpImage[searchX][searchY][1]-1;
-          remap[x][y][direction*3 + 2] = distance;
+        }
+        if (distance > 0) {
+          //get original image pixel that created pixel at searchX,searchY
+          remap[x][y][direction * 3] = preInterpImage[searchX][searchY][0] -1;
+          remap[x][y][direction * 3 + 1] = preInterpImage[searchX][searchY][1]-1;
+          remap[x][y][direction * 3 + 2] = distance;
         }
       }
     }
   }
-
 }
 
 void process()
 {
-
   image_out.header = image_in.header;
   image_out.encoding = image_in.encoding;
   image_out.is_bigendian = image_in.is_bigendian;
   image_out.step = maxT * 3;
   image_out.height = maxR;
   image_out.width = maxT;
-  for(int x=0; x<maxT; x++){
-    for(int y=0; y<maxR; y++){//for every 
+
+  for (int x = 0; x < maxT; x++) {
+    for (int y = 0; y < maxR; y++) {
+      //for every
       double red = 0;
       double green = 0;
       double blue = 0;
       double total_weight = 0;
 
-      for(int direction=0; direction<4; direction++){//check each direction
-        int searchX = (int) remap[x][y][direction*3];
-        int searchY = (int) remap[x][y][direction*3 + 1];
-        int distance = remap[x][y][direction*3 + 2];
-        if(searchX >= 1920 || searchY >= 1080){
+      for (int direction = 0; direction < 4; direction++) {
+        //check each direction
+        int searchX = (int) remap[x][y][direction * 3];
+        int searchY = (int) remap[x][y][direction * 3 + 1];
+        int distance = remap[x][y][direction * 3 + 2];
+        if (searchX >= 1920 || searchY >= 1080) {
           ROS_INFO("x %d y %d distance %d",searchX,searchY,distance);
         }
         //ROS_INFO("get %d",getO(searchX,searchY,0));
-        if(distance >0){
-          red += (1.0/distance)*getO(searchX,searchY,0);
-          green += (1.0/distance)*getO(searchX,searchY,1);
-          blue += (1.0/distance)*getO(searchX,searchY,2);
-          total_weight += (1.0/distance);
+        if (distance >0) {
+          red += (1.0 / distance) * getO(searchX, searchY, 0);
+          green += (1.0 / distance) * getO(searchX, searchY, 1);
+          blue += (1.0 / distance) * getO(searchX, searchY, 2);
+          total_weight += (1.0 / distance);
         }
       }
-      getN(x,y,0)= round(red/total_weight);
-      getN(x,y,1)= round(green/total_weight);
-      getN(x,y,2)= round(blue/total_weight);
+
+      getN(x, y, 0, round(red / total_weight));
+      getN(x, y, 1, round(green / total_weight));
+      getN(x, y, 2, round(blue / total_weight));
     }
   }
 }
-int main(int argc, char **argv)
-{
+
+int main(int argc, char **argv) {
   ros::init(argc, argv, "warper_node");
   ros::NodeHandle node;
   ROS_INFO("starting");
@@ -130,26 +136,17 @@ int main(int argc, char **argv)
   ros::Subscriber sub = node.subscribe("/usb_cam/image_raw", 10, imageCallback);
   ros::Rate rate(100.0);
 
-  while (ros::ok())
-  {
-    if(message)
-    {
-
+  while (ros::ok()) {
+    if(message) {
       message = false;
       //ROS_INFO("step %d height %d width %d encoding %s",image_in.step,image_in.height,image_in.width,image_in.encoding);
       process();
       image_pub.publish(image_out);
-
     }
 
     ros::spinOnce();
     rate.sleep();
-
-
-
-
   }
 
   return 0;
-
 }
