@@ -7,7 +7,7 @@ bool message = false;
 sensor_msgs::Image image_in;
 sensor_msgs::Image image_out;
 
-static constexpr unsigned short maxR = 800, maxT = 9000;
+static constexpr unsigned short maxR = 800, maxT = 4500;
 unsigned short remap[maxT][maxR][12];
 //4 directions
 //absolute X cord, absolute Y cord, distance it was away in new image
@@ -20,7 +20,7 @@ static constexpr unsigned short midX = 960, midY = 540;
 
 __attribute__((always_inline))
 uint8_t getO(const unsigned short x, const unsigned short y, const unsigned short z) {
-  return image_in.data[image_in.step * y + 3 * x + z];
+  return image_in.data[image_i0n.step * y + 3 * x + z];
 }
 
 __attribute__((always_inline))
@@ -41,7 +41,7 @@ void generate()
   for (int x = 0; x < 1920; x++) {
     for (int y = 0; y < 1080; y++) {
       const double Angle = atan2(x - midX, y - midY) * (180.0 / PI) + 180 ; //to degrees
-      const unsigned short newX = round(Angle*25);//to 0.04 degrees
+      const unsigned short newX = round(Angle*12.5);//to 0.08 degrees
       const unsigned short newY = round(sqrt(pow((x - midX), 2) + pow((y - midY), 2))); // pixel radius
       if(x==0 && y==0){
         FillerPixelX = newX;
@@ -115,7 +115,7 @@ void process()
       double green = 0;
       double blue = 0;
       double total_weight = 0;
-      if(x==8999)
+      if(x==maxT-1)
         ROS_INFO("x %d y %d ",x,y);
 
 
@@ -155,7 +155,7 @@ int main(int argc, char **argv) {
   generate();
 
   image_out = sensor_msgs::Image();
-  image_out.data.assign(21600000,0);
+  image_out.data.assign(maxT * maxR * 3 ,0);
   ROS_INFO("started");
 
   ros::Publisher image_pub = node.advertise<sensor_msgs::Image>("de_warped_image", 100);
