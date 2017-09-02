@@ -133,6 +133,7 @@ if (CUDA_FOUND)
 
   cuda_add_executable(${PROJECT_NAME}
     src/warper_node.cpp
+    src/GPU_Warper.cu
   )
 
   target_link_libraries(${PROJECT_NAME}

@@ -2,6 +2,8 @@
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
 #include <iostream>
+#include "warper/GPU_Warper.h"
+
 
 bool message = false;
 sensor_msgs::Image image_in;
@@ -150,7 +152,7 @@ int main(int argc, char **argv) {
 
   memset(preInterpImage,-1,sizeof(unsigned short)*maxT*maxR*2);
   ROS_INFO("started %d %d",preInterpImage[5][5][0],preInterpImage[5][5][1]);
-
+  GPU_Warper totes_gpu;
 
   generate();
 
@@ -167,6 +169,7 @@ int main(int argc, char **argv) {
       message = false;
       //ROS_INFO("step %d height %d width %d encoding %s",image_in.step,image_in.height,image_in.width,image_in.encoding);
       process();
+      totes_gpu.process();
       image_pub.publish(image_out);
     }
 
