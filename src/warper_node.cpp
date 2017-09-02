@@ -6,10 +6,9 @@
 
 
 bool message = false;
-sensor_msgs::Image image_in;
+sensor_msgs::Image::ConstPtr image_in;
 sensor_msgs::Image image_out;
 
-static constexpr unsigned short maxR = 800, maxT = 4500;
 unsigned short remap[maxT][maxR][12];
 //4 directions
 //absolute X cord, absolute Y cord, distance it was away in new image
@@ -18,11 +17,10 @@ unsigned short preInterpImage[maxT][maxR][2];
 //absolute X cord, absolute Y cord
 
 static constexpr float PI = 3.14159265;
-static constexpr unsigned short midX = 960, midY = 540;
 
 __attribute__((always_inline))
 uint8_t getO(const unsigned short x, const unsigned short y, const unsigned short z) {
-  return image_in.data[image_in.step * y + 3 * x + z];
+  return image_in->data[image_in->step * y + 3 * x + z];
 }
 
 __attribute__((always_inline))
@@ -32,7 +30,7 @@ void getN(const unsigned short x, const unsigned short y, const unsigned short z
 
 void imageCallback (const sensor_msgs::Image::ConstPtr& image)
 {
-  image_in = *image;
+  image_in = image;
   message = true;
 }
 unsigned short FillerPixelX;
@@ -103,12 +101,6 @@ void generate()
 
 void process()
 {
-  image_out.header = image_in.header;
-  image_out.encoding = image_in.encoding;
-  image_out.is_bigendian = image_in.is_bigendian;
-  image_out.step = maxT * 3;
-  image_out.height = maxR;
-  image_out.width = maxT;
 
   for (int x = 0; x < maxT-1; x++) {
     for (int y = 0; y < maxR; y++) {
@@ -167,9 +159,15 @@ int main(int argc, char **argv) {
   while (ros::ok()) {
     if(message) {
       message = false;
-      //ROS_INFO("step %d height %d width %d encoding %s",image_in.step,image_in.height,image_in.width,image_in.encoding);
+
       process();
       totes_gpu.process();
+      image_out.header = image_in->header;
+      image_out.encoding = image_in->encoding;
+      image_out.is_bigendian = image_in->is_bigendian;
+      image_out.step = maxT * 3;
+      image_out.height = maxR;
+      image_out.width = maxT;
       image_pub.publish(image_out);
     }
 
