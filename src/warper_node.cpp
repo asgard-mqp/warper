@@ -20,7 +20,7 @@ static constexpr unsigned short midX = 960, midY = 540;
 
 __attribute__((always_inline))
 uint8_t getO(const unsigned short x, const unsigned short y, const unsigned short z) {
-  return image_in.data[image_i0n.step * y + 3 * x + z];
+  return image_in.data[image_in.step * y + 3 * x + z];
 }
 
 __attribute__((always_inline))
