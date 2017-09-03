@@ -6,7 +6,7 @@
 
 
 bool message = false;
-sensor_msgs::Image::ConstPtr image_in;
+sensor_msgs::Image image_in;
 sensor_msgs::Image image_out;
 
 unsigned short remap[maxT][maxR][12];
@@ -20,7 +20,7 @@ static constexpr float PI = 3.14159265;
 
 __attribute__((always_inline))
 uint8_t getO(const unsigned short x, const unsigned short y, const unsigned short z) {
-  return image_in->data[image_in->step * y + 3 * x + z];
+  return image_in.data[image_in.step * y + 3 * x + z];
 }
 
 __attribute__((always_inline))
@@ -30,8 +30,18 @@ void getN(const unsigned short x, const unsigned short y, const unsigned short z
 
 void imageCallback (const sensor_msgs::Image::ConstPtr& image)
 {
-  image_in = image;
+  image_in.header = image->header;
+  //memcpy(&image_in.data.at(0), &image->data.at(0),image->data.size());
+
+  ROS_INFO("image_in size  %d  image size %d",image_in.data.size(),image->data.size());
+  //image_in.data.assign(image->data.begin()+1,image->data.end()-1);
+  image_in.encoding = image->encoding;
+  image_in.is_bigendian = image->is_bigendian;
+  image_in.step = image->step;
+  image_in.height = image->height;
+  image_in.width = image->width;
   message = true;
+  image_in = *image;
 }
 unsigned short FillerPixelX;
 unsigned short FillerPixelY;
@@ -137,19 +147,21 @@ void process()
 }
 
 int main(int argc, char **argv) {
+  //image_out = sensor_msgs::Image();
+  image_out.data.assign(maxT * maxR * 3 ,0);
+  image_in.data.assign(1920 * 1080 *3,5);
+  unsigned short (*map)= (unsigned short *)remap;
+
+  //GPU_Warper totes_gpu(image_in,image_out,map);
 
   ros::init(argc, argv, "warper_node");
   ros::NodeHandle node;
   ROS_INFO("starting");
 
   memset(preInterpImage,-1,sizeof(unsigned short)*maxT*maxR*2);
-  ROS_INFO("started %d %d",preInterpImage[5][5][0],preInterpImage[5][5][1]);
-  GPU_Warper totes_gpu;
-
   generate();
 
-  image_out = sensor_msgs::Image();
-  image_out.data.assign(maxT * maxR * 3 ,0);
+
   ROS_INFO("started");
 
   ros::Publisher image_pub = node.advertise<sensor_msgs::Image>("de_warped_image", 100);
@@ -161,19 +173,18 @@ int main(int argc, char **argv) {
       message = false;
       ROS_INFO("cpu started");
 
-      process();
+      //process();
       ROS_INFO("cpu started");
 
-      unsigned short (*map)= (unsigned short *)remap;
 
-      totes_gpu.process(image_in,image_out,map);
-      image_out.header = image_in->header;
-      image_out.encoding = image_in->encoding;
-      image_out.is_bigendian = image_in->is_bigendian;
+      //totes_gpu.process();
+      image_out.header = image_in.header;
+      image_out.encoding = image_in.encoding;
+      image_out.is_bigendian = image_in.is_bigendian;
       image_out.step = maxT * 3;
       image_out.height = maxR;
       image_out.width = maxT;
-      image_pub.publish(image_out);
+      image_pub.publish(image_in);
     }
 
     ros::spinOnce();
