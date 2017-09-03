@@ -101,7 +101,6 @@ void generate()
 
 void process()
 {
-
   for (int x = 0; x < maxT-1; x++) {
     for (int y = 0; y < maxR; y++) {
       //for every
@@ -138,6 +137,7 @@ void process()
 }
 
 int main(int argc, char **argv) {
+
   ros::init(argc, argv, "warper_node");
   ros::NodeHandle node;
   ROS_INFO("starting");
@@ -159,9 +159,14 @@ int main(int argc, char **argv) {
   while (ros::ok()) {
     if(message) {
       message = false;
+      ROS_INFO("cpu started");
 
       process();
-      totes_gpu.process();
+      ROS_INFO("cpu started");
+
+      unsigned short (*map)= (unsigned short *)remap;
+
+      totes_gpu.process(image_in,image_out,map);
       image_out.header = image_in->header;
       image_out.encoding = image_in->encoding;
       image_out.is_bigendian = image_in->is_bigendian;
