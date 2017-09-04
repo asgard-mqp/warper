@@ -8,6 +8,8 @@
 bool message = false;
 sensor_msgs::Image image_in;
 sensor_msgs::Image image_out;
+uint8_t* imageLocation;
+
 
 unsigned short remap[maxT][maxR][12];
 //4 directions
@@ -31,7 +33,7 @@ void getN(const unsigned short x, const unsigned short y, const unsigned short z
 void imageCallback (const sensor_msgs::Image::ConstPtr& image)
 {
   image_in.header = image->header;
-  //memcpy(&image_in.data.at(0), &image->data.at(0),image->data.size());
+  memcpy(imageLocation, &image->data.at(0),image->data.size());
 
   ROS_INFO("image_in size  %d  image size %d",image_in.data.size(),image->data.size());
   //image_in.data.assign(image->data.begin()+1,image->data.end()-1);
@@ -41,7 +43,7 @@ void imageCallback (const sensor_msgs::Image::ConstPtr& image)
   image_in.height = image->height;
   image_in.width = image->width;
   message = true;
-  image_in = *image;
+  //image_in = *image;
 }
 unsigned short FillerPixelX;
 unsigned short FillerPixelY;
@@ -147,12 +149,16 @@ void process()
 }
 
 int main(int argc, char **argv) {
-  //image_out = sensor_msgs::Image();
-  image_out.data.assign(maxT * maxR * 3 ,0);
-  image_in.data.assign(1920 * 1080 *3,5);
-  unsigned short (*map)= (unsigned short *)remap;
 
-  //GPU_Warper totes_gpu(image_in,image_out,map);
+  image_out.data.assign(maxT * maxR * 3 ,0);
+
+  image_in.data.assign(1920 * 1080 *3,5);
+
+  unsigned short (*map)= (unsigned short *)remap;
+  uint8_t* GPULocation;
+
+  GPU_Warper totes_gpu(&imageLocation,map,&GPULocation);
+
 
   ros::init(argc, argv, "warper_node");
   ros::NodeHandle node;
@@ -174,17 +180,22 @@ int main(int argc, char **argv) {
       ROS_INFO("cpu started");
 
       //process();
-      ROS_INFO("cpu started");
+      ROS_INFO("gpu started");
 
 
-      //totes_gpu.process();
+      totes_gpu.process();
+      ROS_INFO("gpu ended");
+
       image_out.header = image_in.header;
       image_out.encoding = image_in.encoding;
       image_out.is_bigendian = image_in.is_bigendian;
       image_out.step = maxT * 3;
       image_out.height = maxR;
       image_out.width = maxT;
-      image_pub.publish(image_in);
+      ROS_INFO("Original pointer %d",image_out.data.data());
+      memcpy(&image_out.data.at(0), GPULocation, maxT * maxR * 3);
+
+      image_pub.publish(image_out);
     }
 
     ros::spinOnce();

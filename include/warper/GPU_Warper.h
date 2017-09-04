@@ -8,11 +8,12 @@ static constexpr unsigned short outStep = maxT*3, inStep = 1920 *3;//maxT *3 and
 class GPU_Warper
 {
 public:
-  GPU_Warper(const sensor_msgs::Image &image_in, sensor_msgs::Image &image_out, const unsigned short* (map));
+  GPU_Warper(uint8_t** input,const unsigned short* (map), uint8_t** output);
  
   void process();
 private:
 	const uint8_t* d_input;
+	uint8_t* h_output;
 	uint8_t* d_output;
 	const unsigned short* d_map;
 };
