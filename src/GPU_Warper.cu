@@ -12,7 +12,7 @@ void hello(char *a, int *b)
 }
 
 __global__
-void gpu_process(const uint8_t* __restrict__ const in,const unsigned short* __restrict__ const remapArray, uint8_t* __restrict__ out) {
+void gpu_process(const uint8_t* __restrict__ const in, const unsigned short* __restrict__ const remapArray, uint8_t* __restrict__ out) {
   int x = blockIdx.x * blockDim.x + threadIdx.x;
   int y = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -32,9 +32,9 @@ void gpu_process(const uint8_t* __restrict__ const in,const unsigned short* __re
     total_weight += distInv;
   }
     //out[5] = 255;
-  out[outStep * y + 3 * x + 0] = 255;//round(red / total_weight);
-  out[outStep * y + 3 * x + 1] = 0;//round(red / total_weight);
-  out[outStep * y + 3 * x + 2] = 0;//round(red / total_weight);
+  out[outStep * y + 3 * x + 0] = round(red / total_weight);
+  out[outStep * y + 3 * x + 1] = round(green / total_weight);
+  out[outStep * y + 3 * x + 2] = round(blue / total_weight);
 
     //*(out + outStep * y + 3 * x + 0) = 255;//round(red / total_weight);
     //*(out + outStep * y + 3 * x + 1) = 0;//round(green / total_weight);
