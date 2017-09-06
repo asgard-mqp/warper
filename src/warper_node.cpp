@@ -154,10 +154,10 @@ int main(int argc, char **argv) {
 
   image_in.data.assign(1920 * 1080 *3,5);
 
-  unsigned short (*map)= (unsigned short *)remap;
+  unsigned short* map;
   uint8_t* GPULocation;
 
-  GPU_Warper totes_gpu(&imageLocation,map,&GPULocation);
+  GPU_Warper totes_gpu(&imageLocation,&map,&GPULocation);
 
 
   ros::init(argc, argv, "warper_node");
@@ -166,6 +166,7 @@ int main(int argc, char **argv) {
 
   memset(preInterpImage,-1,sizeof(unsigned short)*maxT*maxR*2);
   generate();
+  memcpy(map, &remap[0][0][0], maxT * maxR * 12 * sizeof(short));//to lazy to make this cleaner
 
 
   ROS_INFO("started");
@@ -176,7 +177,6 @@ int main(int argc, char **argv) {
 
   while (ros::ok()) {
     if(message) {
-      message = false;
       ROS_INFO("cpu started");
 
       //process();
@@ -194,8 +194,11 @@ int main(int argc, char **argv) {
       image_out.width = maxT;
       ROS_INFO("Original pointer %d",image_out.data.data());
       memcpy(&image_out.data.at(0), GPULocation, maxT * maxR * 3);
+      //memcpy(&(image_in.data.at(0)), imageLocation, 1920 * 1080 * 3);
 
       image_pub.publish(image_out);
+      message = false;
+
     }
 
     ros::spinOnce();

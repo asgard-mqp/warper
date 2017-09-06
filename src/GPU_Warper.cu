@@ -31,22 +31,18 @@ void gpu_process(const uint8_t* __restrict__ const in, const unsigned short* __r
     blue += distInv * in[inStep * searchY + 3 * searchX + 2];
     total_weight += distInv;
   }
-    //out[5] = 255;
   out[outStep * y + 3 * x + 0] = round(red / total_weight);
   out[outStep * y + 3 * x + 1] = round(green / total_weight);
   out[outStep * y + 3 * x + 2] = round(blue / total_weight);
 
-    //*(out + outStep * y + 3 * x + 0) = 255;//round(red / total_weight);
-    //*(out + outStep * y + 3 * x + 1) = 0;//round(green / total_weight);
-    //*(out + outStep * y + 3 * x + 2) = 0;//round(blue / total_weight);
-
-
 }
 
-GPU_Warper::GPU_Warper(uint8_t** input,const unsigned short* (map), uint8_t** output){
+GPU_Warper::GPU_Warper(uint8_t** input, unsigned short** (map), uint8_t** output){
  cudaSetDeviceFlags(cudaDeviceMapHost);
 
  uint8_t* h_input;
+ unsigned short* h_map;
+
   //gpu_process(input,map,output);
   //device arrays
 
@@ -55,22 +51,24 @@ GPU_Warper::GPU_Warper(uint8_t** input,const unsigned short* (map), uint8_t** ou
 
  ROS_INFO("host input return  %d, good value would be %d",cudaHostAlloc(&h_input, 1920*1080*3, cudaHostAllocMapped),cudaSuccess);
  ROS_INFO("host output return  %d, good value would be %d",cudaHostAlloc(&h_output, maxR*maxT*3, cudaHostAllocMapped),cudaSuccess);
- ROS_INFO("host map return  %d, good value would be %d",cudaHostAlloc(&map, 172800000, cudaHostAllocMapped),cudaSuccess);
+ ROS_INFO("host map return  %d, good value would be %d",cudaHostAlloc(&h_map, 172800000, cudaHostAllocMapped),cudaSuccess);
  ROS_INFO("during pointer %d",h_output);
+
  *output = h_output;
  *input = h_input;
+ *map = h_map;
 
  ROS_INFO("input return %d, good value would be %d",cudaHostGetDevicePointer((void **)&d_input,  (void *) h_input , 0),cudaSuccess);
  ROS_INFO("output return %d, good value would be %d",cudaHostGetDevicePointer((void **)&d_output,  (void *) h_output , 0),cudaSuccess);
- ROS_INFO("map return %d, good value would be %d",cudaHostGetDevicePointer((void **)&d_map,  (void *) map , 0),cudaSuccess);
+ ROS_INFO("map return %d, good value would be %d",cudaHostGetDevicePointer((void **)&d_map,  (void *) h_map , 0),cudaSuccess);
  ROS_INFO(" post pointer %d",h_output);
 
 }
 
 
 void GPU_Warper::process(){
-  dim3 grid(maxT/16,maxR/16);
-  dim3 threadPerBlock(16,16);
+  dim3 grid(maxT/32,maxR/32);
+  dim3 threadPerBlock(32,32);
   gpu_process<<<grid,threadPerBlock>>>(d_input,d_map,d_output);
   ROS_INFO("sync return %d, good value would be %d",cudaThreadSynchronize(),cudaSuccess);
   ROS_INFO("gpu ended");
