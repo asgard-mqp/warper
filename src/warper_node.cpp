@@ -9,6 +9,24 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
+
+
+
+#include <opencv2/cudalegacy.hpp>
+#include <opencv2/cudaimgproc.hpp>
+#include <opencv2/cudaarithm.hpp>
+#include <opencv2/cudawarping.hpp>
+#include <opencv2/cudafeatures2d.hpp>
+#include <opencv2/cudafilters.hpp>
+#include <opencv2/cudaoptflow.hpp>
+#include <"opencv2/cudabgsegm.hpp>
+
+
+
+
+
+
+
 bool message = false;
 bool first = true;
 sensor_msgs::Image image_in;
@@ -124,9 +142,9 @@ int main(int argc, char **argv) {
       out.header = cv_ptr->header;
       out.encoding = cv_ptr->encoding;
       ROS_INFO("encoder out %s",out.encoding);
-      cv::remap(cv_ptr->image, out.image, map_x, map_y, CV_INTER_LINEAR);
+      cuda::remap(cv_ptr->image, out.image, map_x, map_y, CV_INTER_LINEAR);
 
-      //cv::imshow(OPENCV_WINDOW, out.image);
+      cv::imshow(OPENCV_WINDOW, out.image);
       image_pub.publish(out.toImageMsg());
 
       cv::waitKey(3);
