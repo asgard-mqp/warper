@@ -16,7 +16,7 @@
     <param name="autosize" value="true" />
   </node>
   -->
-  <node name="warper" pkg="warper" type="warper" respawn="false" output="screen">
+  <node name="warper" pkg="warper" type="warper" respawn="true" output="screen">
   </node>
 
  <!--
