@@ -1,0 +1,9 @@
+<launch>
+  <node pkg="image_view" type="image_saver" name="image_view" output="screen">
+    <remap from="/image" to="/de_warped_image" />
+    <param name="filename_format" value="%04i.jpg" type="str" />
+  </node>
+ <node name="warper" pkg="warper" type="warper" respawn="false" output="screen">
+  </node>
+</launch>
+
