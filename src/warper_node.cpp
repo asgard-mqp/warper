@@ -23,8 +23,8 @@ cv::Mat map_x, map_y;
 cv::Mat dst;
 
 static const std::string OPENCV_WINDOW = "Image window";
-static constexpr unsigned short maxR = 800, maxT = 4500; 
-static constexpr unsigned short midX = 960, midY = 540; 
+static constexpr unsigned short maxR = 400, maxT = 1500; 
+static constexpr unsigned short midX = 320, midY = 240; 
 static constexpr float PI = 3.14159265; 
 
 
@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
   image_out.step = maxT * 3;
   image_out.height = maxR;
   image_out.width = maxT;
-
+  float widthPerDegree= maxT/360.0;
   while (ros::ok()) {
     if(message) {
       if(first){
@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
 
         for (int x = 0; x < maxT; x++) {
           for (int y = 0; y <maxR; y++) {
-            const double radians = (PI/180.0)*(x/12.5);
+            const double radians = (PI/180.0)*(x/widthPerDegree);
             map_y.at<float>(maxR-y -1,x) = midY + y*sin(radians);
             map_x.at<float>(maxR-y -1,x) = midX + y*cos(radians);
           }
