@@ -24,7 +24,6 @@ cv::Mat dst;
 
 static const std::string OPENCV_WINDOW = "Image window";
 static constexpr unsigned short maxR = 400, maxT = 1500; 
-static constexpr unsigned short midX = 320, midY = 240; 
 static constexpr float PI = 3.14159265; 
 
 
@@ -52,11 +51,13 @@ void imageCallback (const sensor_msgs::Image::ConstPtr& image)
 }
 
 int main(int argc, char **argv) {
-
+  int midX,midY;
   ros::init(argc, argv, "warper_node");
-  ros::NodeHandle node;
+  ros::NodeHandle node("~");
   ROS_INFO("starting");
-
+  node.getParam("center_X",midX);
+  node.getParam("center_Y",midY);
+  ROS_INFO("X %d Y %d",(int)midX,(int)midY);
 
   
   image_pub = node.advertise<sensor_msgs::Image>("de_warped_image", 100);
