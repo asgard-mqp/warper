@@ -23,7 +23,8 @@ cv::Mat map_x, map_y;
 cv::Mat dst;
 
 static const std::string OPENCV_WINDOW = "Image window";
-static constexpr unsigned short maxR = 400, maxT = 1500; 
+static constexpr unsigned short maxR = 360, maxT = 1500; 
+static constexpr unsigned short AngleOffset = 150;
 static constexpr float PI = 3.14159265; 
 
 
@@ -67,22 +68,22 @@ int main(int argc, char **argv) {
   image_out.header = image_in.header;
   image_out.encoding = image_in.encoding;
   image_out.is_bigendian = image_in.is_bigendian;
-  image_out.step = maxT * 3;
+  image_out.step = (maxT-2*AngleOffset) * 3 ;
   image_out.height = maxR;
-  image_out.width = maxT;
+  image_out.width = maxT-2*AngleOffset;
   float widthPerDegree= maxT/360.0;
   while (ros::ok()) {
     if(message) {
       if(first){
-        out.image.create(maxR,maxT, cv_ptr->image.type() );
-        map_x.create(maxR,maxT, CV_32FC1 );
-        map_y.create(maxR,maxT, CV_32FC1 );
+        out.image.create(maxR,maxT-2*AngleOffset, cv_ptr->image.type() );
+        map_x.create(maxR,maxT-2*AngleOffset, CV_32FC1 );
+        map_y.create(maxR,maxT-2*AngleOffset, CV_32FC1 );
 
-        for (int x = 0; x < maxT; x++) {
+        for (int x = AngleOffset; x < maxT-AngleOffset; x++) {
           for (int y = 0; y <maxR; y++) {
             const double radians = (PI/180.0)*(x/widthPerDegree);
-            map_y.at<float>(maxR-y -1,x) = midY + y*sin(radians);
-            map_x.at<float>(maxR-y -1,x) = midX + y*cos(radians);
+            map_y.at<float>(maxR-y -1,x-AngleOffset) = midY - y*cos(radians);
+            map_x.at<float>(maxR-y -1,x-AngleOffset) = midX + y*sin(radians);
           }
         }
         first = false;
