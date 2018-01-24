@@ -11,14 +11,14 @@
   </node>
     <node name="save_left" pkg="image_view" type="image_saver" output="screen" respawn="false"  >
     <remap from="image" to="/leftW/de_warped_image"/>
-    <remap from="/leftW/camera_info'" to="/cam1/camera_info'"/>
+    <remap from="/leftW/camera_info" to="/cam1/camera_info"/>
     <param name="save_all_image" value="true" />
     <param name="filename_format" value="left%04d.%s" />
   </node>
   
   <node name="save_right" pkg="image_view" type="image_saver" output="screen" respawn="false"  >
     <remap from="image" to="/rightW/de_warped_image"/>
-    <remap from="/rightW/camera_info'" to="/cam0/camera_info'"/>
+    <remap from="/rightW/camera_info" to="/cam0/camera_info"/>
 
     <param name="filename_format" value="right%04d.%s" />
     <param name="save_all_image" value="true" />
