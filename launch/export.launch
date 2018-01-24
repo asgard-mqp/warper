@@ -1,0 +1,27 @@
+<launch>
+  <node name="rightW" pkg="warper" type="warper" respawn="true" output="log">
+  	<param name="center_X" value="323.271194032421" />
+  	<param name="center_Y" value="234.033518741674" />
+    <remap from="/usb_cam/image_raw" to="/cam0/image_raw"/>
+  </node>
+  <node name="leftW" pkg="warper" type="warper" respawn="true" output="log">
+  	<param name="center_X" value="336.520138276981" />
+  	<param name="center_Y" value="229.478345377257" />
+    <remap from="/usb_cam/image_raw" to="/cam1/image_raw"/>
+  </node>
+    <node name="save_left" pkg="image_view" type="image_saver" output="screen" respawn="false"  >
+    <remap from="image" to="/leftW/de_warped_image"/>
+    <param name="save_all_image" value="true" />
+    <param name="filename_format" value="left%04d.%s" />
+  </node>
+  
+  <node name="save_right" pkg="image_view" type="image_saver" output="screen" respawn="false"  >
+    <remap from="image" to="/rightW/de_warped_image"/>
+    <param name="filename_format" value="right%04d.%s" />
+    <param name="save_all_image" value="true" />
+  </node>
+
+</launch>
+
+
+

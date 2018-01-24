@@ -51,13 +51,13 @@ void imageCallback (const sensor_msgs::Image::ConstPtr& image)
 }
 
 int main(int argc, char **argv) {
-  int midX,midY;
+  double midX,midY;
   ros::init(argc, argv, "warper_node");
   ros::NodeHandle node("~");
   ROS_INFO("starting");
   node.getParam("center_X",midX);
   node.getParam("center_Y",midY);
-  ROS_INFO("X %d Y %d",(int)midX,(int)midY);
+  ROS_INFO("X %f Y %f",midX,midY);
 
   
   image_pub = node.advertise<sensor_msgs::Image>("de_warped_image", 100);
