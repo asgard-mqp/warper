@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
       //cv::imshow(OPENCV_WINDOW, out.image);
       image_pub.publish(out.toImageMsg());
 
-      cv::waitKey(3);
+      //cv::waitKey(3);
 
 
       message = false;
